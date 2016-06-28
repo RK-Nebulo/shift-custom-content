@@ -3,7 +3,7 @@
 Plugin Name:	SHIFT - Custom Content
 Plugin URI:		https://github.com/nebulodesign/shift-custom-content/
 Description:	Custom Content Management
-Version:			1.0
+Version:			1.0.1
 Author:				Nebulo Design
 Author URI:		http://nebulodesign.com
 License:			GPL
@@ -106,15 +106,18 @@ add_action( 'init', function(){
 			include $inc_dir . $post_type_name . '.php';
 	}
 
-	$taxonomies_files = array_filter( scandir( $taxonomies_dir ), function($f){ return !is_dir( $f ) && pathinfo( $f, PATHINFO_EXTENSION ) === 'json'; } );
+	if( file_exists( $taxonomies_dir ) ) {
 
-	foreach( $taxonomies_files as $taxonomy_file ) {
-		$taxonomy_name = pathinfo( $taxonomy_file, PATHINFO_FILENAME );
-		$taxonomy_args = json_decode( file_get_contents( $taxonomies_dir . $taxonomy_file ), true );
-		register_taxonomy(
-			$taxonomy_name,
-			( isset( $relationships[$taxonomy_name] ) && !empty( $relationships[$taxonomy_name] ) ) ? $relationships[$taxonomy_name] : null,
-			$taxonomy_args );
+		$taxonomies_files = array_filter( scandir( $taxonomies_dir ), function($f){ return !is_dir( $f ) && pathinfo( $f, PATHINFO_EXTENSION ) === 'json'; } );
+
+		foreach( $taxonomies_files as $taxonomy_file ) {
+			$taxonomy_name = pathinfo( $taxonomy_file, PATHINFO_FILENAME );
+			$taxonomy_args = json_decode( file_get_contents( $taxonomies_dir . $taxonomy_file ), true );
+			register_taxonomy(
+				$taxonomy_name,
+				( isset( $relationships[$taxonomy_name] ) && !empty( $relationships[$taxonomy_name] ) ) ? $relationships[$taxonomy_name] : null,
+				$taxonomy_args );
+		}
 	}
 
 add_action( 'admin_enqueue_scripts', function(){
