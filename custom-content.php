@@ -3,7 +3,7 @@
 Plugin Name:	SHIFT - Custom Content
 Plugin URI:		https://github.com/nebulodesign/shift-custom-content/
 Description:	Custom Content Management
-Version:			1.0.1
+Version:			1.1
 Author:				Nebulo Design
 Author URI:		http://nebulodesign.com
 License:			GPL
@@ -15,110 +15,63 @@ License:			GPL
 if( is_admin() && class_exists( 'Shift_Plugin_Updater' ) ) new Shift_Plugin_Updater( __FILE__ );
 
 
-if( !function_exists( 'get_custom_post_types' ) ) {
-	function get_custom_post_types() {
-		$custom_post_types = array_map(
-			function( $file ){ return pathinfo( $file, PATHINFO_FILENAME ); },
-			array_filter(
-				scandir( dirname( __FILE__ ) . '/custom-post-types/' ),
-				function( $f ){ return ( !is_dir( $f ) && pathinfo( $f, PATHINFO_EXTENSION ) === 'json' && strpos( $f, '_' ) !== 0 ); }
-			)
-		);
+register_activation_hook( __FILE__, function(){
 
-		return $custom_post_types;
-	}
-}
+	if( !file_exists( get_stylesheet_directory() . '/custom-post-types/' ) )
+		mkdir( get_stylesheet_directory() . '/custom-post-types/' );
 
-if( !function_exists( 'get_custom_taxonomies' ) ) {
-	function get_custom_taxonomies() {
-		$custom_taxonomies = array_map(
-			function( $file ){ return pathinfo( $file, PATHINFO_FILENAME ); },
-			array_filter(
-				scandir( dirname( __FILE__ ) . '/custom-taxonomies/' ),
-				function( $f ){ return ( !is_dir( $f ) && pathinfo( $f, PATHINFO_EXTENSION ) === 'json' && strpos( $f, '_' ) !== 0 ); }
-			)
-		);
+	if( !file_exists( get_stylesheet_directory() . '/custom-taxonomies/' ) )
+		mkdir( get_stylesheet_directory() . '/custom-taxonomies/' );
+	
+});
 
-		return $custom_taxonomies;
-	}
-}
+
+include_once 'functions.php';
 
 
 add_action( 'init', function(){
 
-	$dirs = array(
-		'post_types'	=> 'custom-post-types',
-		'taxonomies'	=> 'custom-taxonomies',
-		'functions'		=> 'custom-functions',
-		'inc'					=> 'inc',
+	$post_types_dir	= get_stylesheet_directory() . '/custom-post-types/';
+	$taxonomies_dir	= get_stylesheet_directory() . '/custom-taxonomies/';
+	$functions_dir	= dirname( __FILE__ ) . '/custom-functions/';
+	$inc_dir				= dirname( __FILE__ ) . '/inc/';
+
+
+	// register posts types
+
+	$custom_post_types = array_combine(
+		get_custom_post_types(),
+		array_map( function( $cpt ) use( $post_types_dir ){
+			return json_decode( file_get_contents( $post_types_dir . $cpt . '.json' ), true );
+		}, get_custom_post_types() )
 	);
 
-	extract( array_combine(
-		array_map( function( $key ){ return $key . '_dir'; }, array_keys( $dirs ) ),
-		array_map( function( $dir ){ return dirname( __FILE__ ) . '/' . $dir . '/'; }, $dirs )
-	) );
-
-	$relationships = array();
-
-	foreach( get_custom_post_types() as $post_type_name ) {
-		$post_type_file = $post_type_name . '.json';
-		$post_type_args = json_decode( file_get_contents( $post_types_dir . $post_type_file ), true );
-		$post_type_pl_name = isset( $post_type_args['name'] ) ? $post_type_args['name'] : pathinfo( $post_type_file, PATHINFO_FILENAME );
+	foreach( $custom_post_types as $post_type_name => $post_type_args )
 
 		register_post_type( $post_type_name, $post_type_args );
 
-		if( isset( $post_type_args['taxonomies'] ) && !empty( $post_type_args['taxonomies'] ) ) {
 
-			foreach( $post_type_args['taxonomies'] as $taxonomy ){
+	// set up relationships between post types and taxonomies
 
-				$pattern = '%' . $taxonomy . '%';
+	$relationships = array_map( function( $post_type ){ return $post_type['taxonomies']; }, $custom_post_types );
 
-/*
-				if( isset( $post_type_args['rewrite']['slug'] ) && strpos( $post_type_args['rewrite']['slug'], $pattern ) !== false ) {
 
-					add_filter( 'post_type_link', function( $post_link, $post, $leavename, $sample ) use( $taxonomy, $pattern, $post_type_pl_name ){
+	// register taxonomies
 
-						if( strpos( $post_link, $pattern ) !== false ) {
-							$terms = get_the_terms( $post->ID, $taxonomy );
+	$custom_taxonomies = array_combine(
+		get_custom_taxonomies(),
+		array_map( function( $taxonomy ) use( $taxonomies_dir ){
+			return json_decode( file_get_contents( $taxonomies_dir . $taxonomy . '.json' ), true );
+		}, get_custom_taxonomies() )
+	);
 
-							if( is_array( $terms ) && !empty( $terms ) )
-								$term_slug = array_pop( $terms )->slug;
+	foreach( $custom_taxonomies as $taxonomy_name => $taxonomy_args )
 
-							else
-								$term_slug = $post_type_pl_name;
-
-//							else
-//								$term_slug = 'other';
-
-							$post_link = str_replace( $pattern, $term_slug, $post_link );
-						}
-
-						return $post_link;
-					}, 10, 4 );
-				}
-*/
-
-				$relationships[$taxonomy][] = $post_type_name;
-			}
-		}
-
-		if( file_exists( $inc_dir . $post_type_name . '.php' ) )
-			include $inc_dir . $post_type_name . '.php';
-	}
-
-	if( file_exists( $taxonomies_dir ) ) {
-
-		$taxonomies_files = array_filter( scandir( $taxonomies_dir ), function($f){ return !is_dir( $f ) && pathinfo( $f, PATHINFO_EXTENSION ) === 'json'; } );
-
-		foreach( $taxonomies_files as $taxonomy_file ) {
-			$taxonomy_name = pathinfo( $taxonomy_file, PATHINFO_FILENAME );
-			$taxonomy_args = json_decode( file_get_contents( $taxonomies_dir . $taxonomy_file ), true );
-			register_taxonomy(
-				$taxonomy_name,
-				( isset( $relationships[$taxonomy_name] ) && !empty( $relationships[$taxonomy_name] ) ) ? $relationships[$taxonomy_name] : null,
-				$taxonomy_args );
-		}
-	}
+		register_taxonomy(
+			$taxonomy_name,
+			array_keys( array_filter( $relationships, function( $taxonomies ) use( $taxonomy_name ){ return in_array( $taxonomy_name, $taxonomies ); } ) ),
+			$taxonomy_args
+		);
 
 add_action( 'admin_enqueue_scripts', function(){
 	wp_add_inline_style( 'common', '
