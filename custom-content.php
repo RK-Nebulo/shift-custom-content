@@ -3,7 +3,7 @@
 Plugin Name:	SHIFT - Custom Content
 Plugin URI:		https://github.com/nebulodesign/shift-custom-content/
 Description:	Custom Content Management
-Version:			1.1
+Version:			1.2
 Author:				Nebulo Design
 Author URI:		http://nebulodesign.com
 License:			GPL
@@ -17,12 +17,39 @@ if( is_admin() && class_exists( 'Shift_Plugin_Updater' ) ) new Shift_Plugin_Upda
 
 register_activation_hook( __FILE__, function(){
 
-	if( !file_exists( get_stylesheet_directory() . '/custom-post-types/' ) )
-		mkdir( get_stylesheet_directory() . '/custom-post-types/' );
+	if( !file_exists( get_stylesheet_directory() . '/settings/' ) )
+		mkdir( get_stylesheet_directory() . '/settings/' );
 
-	if( !file_exists( get_stylesheet_directory() . '/custom-taxonomies/' ) )
-		mkdir( get_stylesheet_directory() . '/custom-taxonomies/' );
-	
+	if( !file_exists( get_stylesheet_directory() . '/settings/custom-post-types/' ) )
+		mkdir( get_stylesheet_directory() . '/settings/custom-post-types/' );
+
+	if( !file_exists( get_stylesheet_directory() . '/settings/custom-taxonomies/' ) )
+		mkdir( get_stylesheet_directory() . '/settings/custom-taxonomies/' );
+
+	if( file_exists( get_stylesheet_directory() . '/custom-post-types/' ) ) {
+
+		foreach( array_filter( scandir( get_stylesheet_directory() . '/custom-post-types/' ), function( $file ){ return ( $file !== '.' && $file !== '..' ); } ) as $file )
+
+			if( copy( get_stylesheet_directory() . '/custom-post-types/' . $file, get_stylesheet_directory() . '/settings/custom-post-types/' . $file ) )
+
+				unlink( get_stylesheet_directory() . '/custom-post-types/' . $file );
+
+		rmdir( get_stylesheet_directory() . '/custom-post-types/' );
+
+	}
+
+	if( file_exists( get_stylesheet_directory() . '/custom-taxonomies/' ) ) {
+
+		foreach( array_filter( scandir( get_stylesheet_directory() . '/custom-taxonomies/' ), function( $file ){ return ( $file !== '.' && $file !== '..' ); } ) as $file )
+
+			if( copy( get_stylesheet_directory() . '/custom-taxonomies/' . $file, get_stylesheet_directory() . '/settings/custom-taxonomies/' . $file ) )
+
+				unlink( get_stylesheet_directory() . '/custom-taxonomies/' . $file );
+
+		rmdir( get_stylesheet_directory() . '/custom-taxonomies/' );
+
+	}
+
 });
 
 
@@ -31,8 +58,8 @@ include_once 'functions.php';
 
 add_action( 'init', function(){
 
-	$post_types_dir	= get_stylesheet_directory() . '/custom-post-types/';
-	$taxonomies_dir	= get_stylesheet_directory() . '/custom-taxonomies/';
+	$post_types_dir	= get_stylesheet_directory() . '/settings/custom-post-types/';
+	$taxonomies_dir	= get_stylesheet_directory() . '/settings/custom-taxonomies/';
 	$functions_dir	= dirname( __FILE__ ) . '/custom-functions/';
 	$inc_dir				= dirname( __FILE__ ) . '/inc/';
 
@@ -251,7 +278,7 @@ add_action( 'admin_menu', function(){
 		add_settings_section(
 			'shift_edit_' . $post_type->name . '_settings',
 			'Basic Settings',
-			function() use( $post_type ){ include 'settings-section.php'; },
+			function() use( $post_type ){ /* include 'settings-section.php'; */ },
 			'shift_edit_' . $post_type->name
 		);
 
@@ -332,7 +359,7 @@ add_action( 'admin_menu', function(){
 		add_settings_section(
 			'shift_edit_' . $post_type->name . '_rewrite',
 			'Rewrite Rules',
-			function() use( $post_type ){ include 'settings-section.php'; },
+			function() use( $post_type ){ /* include 'settings-section.php'; */ },
 			'shift_edit_' . $post_type->name
 		);
 
@@ -372,7 +399,7 @@ add_action( 'admin_menu', function(){
 		add_settings_section(
 			'shift_edit_' . $post_type->name . '_labels',
 			'Labels',
-			function() use( $post_type ){ include 'settings-section.php'; },
+			function() use( $post_type ){ /* include 'settings-section.php'; */ },
 			'shift_edit_' . $post_type->name
 		);
 
@@ -492,7 +519,7 @@ add_action( 'admin_menu', function(){
 		add_settings_section(
 			'shift_edit_' . $post_type->name . '_advanced',
 			'Advanced Options',
-			function() use( $post_type ){ include 'settings-section.php'; },
+			function() use( $post_type ){ /* include 'settings-section.php'; */ },
 			'shift_edit_' . $post_type->name
 		);
 
@@ -838,6 +865,7 @@ add_action( 'admin_menu', function(){
 			'taxonomies' => ( isset( $post_taxonomies ) && is_array( $post_taxonomies ) ) ? $post_taxonomies : array(),
 			'rewrite' => ( isset( $post_rewrite ) && is_array( $post_rewrite ) ) ? array_map( function( $rewrite ){ return $rewrite === 'on' ? true : $rewrite; }, $post_rewrite ) : false,
 			'menu_position' => ( isset( $post_menu_position ) && intval( $post_menu_position ) > 0 ) ? intval( $post_menu_position ) : null,
+			'menu_icon' => ( isset( $post_menu_icon ) && !empty( $post_menu_icon ) ) ? $post_menu_icon : null,
 			'capability_type' => 'post',
 			'register_meta_box_cb' => ( isset( $post_register_meta_box_cb ) && !empty( $post_register_meta_box_cb ) ) ? $post_register_meta_box_cb : null,
 			'has_archive' => ( isset( $post_has_archive ) && !empty( $post_has_archive ) ) ? $post_has_archive : null,
