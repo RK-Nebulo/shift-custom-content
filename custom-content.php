@@ -3,7 +3,7 @@
 Plugin Name:	SHIFT - Custom Content
 Plugin URI:		https://github.com/nebulodesign/shift-custom-content/
 Description:	Custom Content Management
-Version:			1.2
+Version:			1.2.1
 Author:				Nebulo Design
 Author URI:		http://nebulodesign.com
 License:			GPL
@@ -77,7 +77,6 @@ add_action( 'init', function(){
 
 		register_post_type( $post_type_name, $post_type_args );
 
-
 	// set up relationships between post types and taxonomies
 
 	$relationships = array_map( function( $post_type ){ return $post_type['taxonomies']; }, $custom_post_types );
@@ -113,13 +112,13 @@ add_action( 'admin_enqueue_scripts', function(){
 			background-color: rgb(221, 221, 221);
 		}' );
 
-});
+} );
 
 
 add_action( 'admin_menu', function(){
 
 	/** Custom Post Types list */
-	if( has_role( 'administrator' ) )
+	if( user_has_role( 'administrator' ) )
 		add_menu_page( 'Custom Content', 'Custom Content', 'manage_options', 'shift-custom-content', function(){
 			
 			if( ! class_exists( 'WP_List_Table' ) ) require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
@@ -795,7 +794,7 @@ add_action( 'admin_menu', function(){
 		});
 	}
 
-});
+}, 1 );
 
 	add_action( 'admin_post_shift_edit_post_type', function() use( $post_types_dir, $functions_dir, $inc_dir ){
 
@@ -876,6 +875,9 @@ add_action( 'admin_menu', function(){
 		) );
 
 		$args = array_merge( $_JSON, $args );
+
+		if( isset( $args['cap'] ) ) unset( $args['cap'] );
+
 		$fp = fopen( $post_types_dir . $post_name . '.json', 'w' );
 		fwrite( $fp, json_encode( $args, JSON_PRETTY_PRINT ) );
 		fclose($fp);
@@ -989,6 +991,6 @@ add_action( 'admin_menu', function(){
 		}
 
 		wp_redirect( add_query_arg( 'page', 'shift-edit-'.$post_name, admin_url( 'admin.php' ) ) );
-	});
+	} );
 
-});
+}, 1 );
