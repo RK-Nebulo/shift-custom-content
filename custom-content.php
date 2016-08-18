@@ -118,7 +118,7 @@ add_action( 'admin_enqueue_scripts', function(){
 add_action( 'admin_menu', function(){
 
 	/** Custom Post Types list */
-	if( user_has_role( 'administrator' ) )
+	if( current_user_can( 'manage_options' ) )
 		add_menu_page( 'Custom Content', 'Custom Content', 'manage_options', 'shift-custom-content', function(){
 			
 			if( ! class_exists( 'WP_List_Table' ) ) require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
